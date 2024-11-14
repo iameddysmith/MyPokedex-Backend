@@ -1,6 +1,7 @@
 const winston = require("winston");
 const { SERVER_ERROR } = require("../utils/errors");
 
+//error
 const errorHandler = (err, req, res, next) => {
   winston.error(err.stack || err);
 

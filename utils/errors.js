@@ -6,7 +6,7 @@ const SERVER_ERROR = 500;
 const UNAUTHORIZED = 401;
 const FORBIDDEN = 403;
 const CONFLICT = 409;
-
+//errors
 module.exports = {
   OK,
   CREATED,

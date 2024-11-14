@@ -1,6 +1,14 @@
 const { Joi, celebrate, Segments } = require("celebrate");
 const validator = require("validator");
 
+const avatarOptions = [
+  "/assets/avatar1.png",
+  "/assets/avatar2.png",
+  "/assets/avatar3.png",
+  "/assets/avatar4.png",
+  "/assets/avatar5.png",
+];
+
 const validateURL = (value, helpers) => {
   if (!validator.isURL(value)) {
     return helpers.error("string.uri");
@@ -16,22 +24,13 @@ const validateEmail = (value, helpers) => {
 };
 
 const validateCreateUser = celebrate({
-  [Segments.BODY]: Joi.object().keys({
-    name: Joi.string().min(2).max(30).required().messages({
-      "string.min": 'The minimum length of the "name" field is 2',
-      "string.max": 'The maximum length of the "name" field is 30',
-      "string.empty": 'The "name" field must be filled in',
-    }),
-    avatar: Joi.string().custom(validateURL).messages({
-      "string.uri": 'The "avatar" field must be a valid URL',
-    }),
-    email: Joi.string().required().custom(validateEmail).messages({
-      "string.email": 'The "email" field must be a valid email address',
-      "string.empty": 'The "email" field must be filled in',
-    }),
-    password: Joi.string().required().messages({
-      "string.empty": 'The "password" field must be filled in',
-    }),
+  body: Joi.object().keys({
+    email: Joi.string().email().required(),
+    password: Joi.string().required(),
+    name: Joi.string().min(2).max(30).required(),
+    avatar: Joi.string()
+      .valid(...avatarOptions)
+      .required(),
   }),
 });
 
@@ -53,9 +52,11 @@ const validateUpdateUserProfile = celebrate({
       "string.min": 'The minimum length of the "name" field is 2',
       "string.max": 'The maximum length of the "name" field is 30',
     }),
-    avatar: Joi.string().custom(validateURL).messages({
-      "string.uri": 'The "avatar" field must be a valid URL',
-    }),
+    avatar: Joi.string()
+      .valid(...avatarOptions)
+      .messages({
+        "any.only": 'The "avatar" field must be one of the allowed values',
+      }),
   }),
 });
 
