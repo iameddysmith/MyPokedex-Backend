@@ -15,10 +15,11 @@ const addPokemonToCollection = async (req, res, next) => {
   try {
     const { name, type, sprite } = req.body;
     const owner = req.user._id;
+    const types = Array.isArray(type) ? type : [type];
 
     const newPokemon = await PokemonCollection.create({
       name,
-      type,
+      types,
       sprite,
       owner,
     });

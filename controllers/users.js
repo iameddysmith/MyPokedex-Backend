@@ -22,7 +22,7 @@ const updateProfile = async (req, res, next) => {
   try {
     const { name, avatar } = req.body;
 
-    // update user
+    // update user TO DO
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { name, avatar },

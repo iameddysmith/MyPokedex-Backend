@@ -5,7 +5,7 @@ const pokemonSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  type: {
+  types: {
     type: [String],
     required: true,
   },

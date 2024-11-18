@@ -1,7 +1,28 @@
-const axios = require("axios");
+const https = require("https");
 const BadRequestError = require("../utils/errors/BadRequestError");
-const NotFoundError = require("../utils/errors/NotFoundError");
 const ITEMS_PER_PAGE = 50;
+
+function fetchJSON(url) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, (response) => {
+        let data = "";
+
+        response.on("data", (chunk) => {
+          data += chunk;
+        });
+
+        response.on("end", () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (err) {
+            reject(err);
+          }
+        });
+      })
+      .on("error", reject);
+  });
+}
 
 async function getPokemonData(req, res, next) {
   const { type, search, page = 1 } = req.query;
@@ -13,24 +34,24 @@ async function getPokemonData(req, res, next) {
   const offset = (page - 1) * ITEMS_PER_PAGE;
 
   try {
-    const allResponse = await axios.get(
+    const allResponse = await fetchJSON(
       "https://pokeapi.co/api/v2/pokemon?limit=10000"
     );
-    let allPokemon = allResponse.data.results;
+    let allPokemon = allResponse.results;
 
     if (type) {
       try {
-        const typeResponse = await axios.get(
+        const typeResponse = await fetchJSON(
           `https://pokeapi.co/api/v2/type/${type.toLowerCase()}`
         );
         const typePokemonUrls = new Set(
-          typeResponse.data.pokemon.map((p) => p.pokemon.url)
+          typeResponse.pokemon.map((p) => p.pokemon.url)
         );
         allPokemon = allPokemon.filter((pokemon) =>
           typePokemonUrls.has(pokemon.url)
         );
-      } catch (typeError) {
-        console.error("Invalid Pokémon type:", typeError);
+      } catch (err) {
+        console.error("Invalid Pokémon type:", err);
         return next(new BadRequestError("Invalid Pokémon type specified"));
       }
     }
@@ -41,6 +62,10 @@ async function getPokemonData(req, res, next) {
       );
     }
 
+    if (allPokemon.length === 0) {
+      return res.json({ pokemon: [], totalResults: 0 });
+    }
+
     // sort alphabetically
     allPokemon.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -48,21 +73,25 @@ async function getPokemonData(req, res, next) {
     const pageData = allPokemon.slice(offset, offset + ITEMS_PER_PAGE);
 
     if (pageData.length === 0) {
-      throw new NotFoundError("No Pokémon found for the specified criteria");
+      return res.json({ pokemon: [], totalResults: allPokemon.length });
     }
 
-    const detailedDataPromises = pageData.map((pokemon) =>
-      axios.get(pokemon.url).then((res) => ({
-        name: res.data.name,
-        id: res.data.id,
-        sprite: res.data.sprites.front_default,
-        types: res.data.types.map((type) => type.type.name),
-      }))
+    const detailedData = await Promise.all(
+      pageData.map(async (pokemon) => {
+        const pokemonResponse = await fetchJSON(pokemon.url);
+        return {
+          name: pokemonResponse.name,
+          id: pokemonResponse.id,
+          sprite: pokemonResponse.sprites.front_default,
+          types: pokemonResponse.types.map((type) => type.type.name),
+        };
+      })
     );
 
-    const detailedData = await Promise.all(detailedDataPromises);
-
-    res.json({ pokemon: detailedData, totalResults: allPokemon.length });
+    res.json({
+      pokemon: detailedData,
+      totalResults: allPokemon.length,
+    });
   } catch (error) {
     console.error("Failed to fetch Pokémon data:", error);
     next(new Error("Failed to fetch Pokémon data"));
