@@ -15,9 +15,23 @@ app.use(helmet());
 app.use(apiLimiter);
 
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "https://pokedex.codemare.com",
+    ];
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
   optionsSuccessStatus: 200,
 };
+
+app.use(cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(requestLogger);
